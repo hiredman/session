@@ -10,7 +10,8 @@
             ;;[ring.util [response :as response]]
             [noir.response :as response]
             [ring.middleware [multipart-params :as mp]]
-            )
+            ;; ensure this stuff loads so noir's defpage works
+            [session.views.main])
   )
 
 (import '(java.io Writer))
@@ -102,18 +103,34 @@
   (response/set-headers {"Content-Disposition" "attachment; filename=\"session.clj\""}
   (:session-data x)))
 
+(defn noir-handler []
+  (server/gen-handler
+   {:mode :dev
+    :ns 'htmlrepl}))
+
+(defn wrap-ware [handler]
+  (-> handler
+      ((fn [handler]
+         (fn [req]
+           (binding [*ns* (the-ns 'session.server)
+                     *data-readers* {'session/loop #'tag-loop
+                                     'session/subsession #'tag-subsession
+                                     'session/session #'tag-session
+                                     'ui/test #'tag-test
+                                     'ui/html #'tag-html}
+                     *print-meta* true]
+             (handler req)))))))
+
+(defn app [req]
+  ((-> (noir-handler)
+       wrap-ware)
+   req))
+
 (defn -main [& m]
   (binding [*print-meta* true]
     (let [mode (keyword (or (first m) :dev))
-         port (Integer. (get (System/getenv) "PORT" "8090"))]
-    ;;  (cljs/start mode cljs-options)
-      (server/add-middleware
-       (fn [handler] (fn [req]
-                      (binding [
-                                *ns* (the-ns 'session.server)
-                                *data-readers* {'session/loop #'tag-loop 'session/subsession #'tag-subsession 'session/session #'tag-session 'ui/test #'tag-test 'ui/html #'tag-html}
-                                *print-meta* true] (handler req)))))
-      (server/add-middleware mp/wrap-multipart-params)
-
-     (server/start port {:mode mode
-                         :ns 'htmlrepl}))))
+          port (Integer. (get (System/getenv) "PORT" "8090"))]
+      ;;  (cljs/start mode cljs-options)
+      (server/add-middleware wrap-ware)
+      (server/start port {:mode mode
+                          :ns 'htmlrepl}))))

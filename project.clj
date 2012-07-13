@@ -14,13 +14,9 @@
                ;; [himera "0.1.0-SNAPSHOT" :exclusions [org.clojure/clojure org.clojure/clojurescript ]]
                 [cljs-jquery "1.0.4-SNAPSHOT" :exclusions [org.clojure/clojure org.clojure/clojurescript]]
                 [noir-cljs "0.3.0" :exclusions [org.clojure/clojure org.clojure/clojurescript]]
-                 ]
-  :dev-dependencies [
-
-                     ]
-
-
-   :source-path "src/clj"
+                ]
+  :dev-dependencies [[lein-ring "0.7.1"]]
+  :source-path "src/clj"
    :plugins [[lein-cljsbuild "0.1.8"] ]
    :cljsbuild {
     :builds [{
@@ -34,5 +30,6 @@
                    :output-dir "resources/public/cljs"
                    :optimizations :simple
 
-         }}]}
-:main ^{:skip-aot true} session.server)
+                   }}]}
+   :ring {:handler session.server/app}
+   :main ^{:skip-aot true} session.server)
